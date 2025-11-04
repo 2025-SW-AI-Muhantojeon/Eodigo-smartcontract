@@ -1,7 +1,7 @@
 import { Signer } from "ethers";
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import { OwnerManager, WhiteList } from "../typechain-types";
+import { OwnerManager, WhiteList } from "../../typechain-types";
 
 describe("WhiteListTest", function () {
   let owner: Signer,

@@ -1,7 +1,7 @@
 import { Signer } from "ethers";
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import { OwnerManager, StoreList } from "../typechain-types";
+import { OwnerManager, StoreList } from "../../typechain-types";
 
 describe("StoreListTest", function () {
   let owner: Signer,
