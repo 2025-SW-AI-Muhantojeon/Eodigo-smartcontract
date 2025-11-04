@@ -6,18 +6,24 @@ import "./interface/IOwnerManager.sol";
 contract WhiteList {
     IOwnerManager public ownerManager;
 
-    constructor(address _ownerManager) {
-        ownerManager = IOwnerManager(_ownerManager);
-    }
+    mapping (address => bool) public whiteList;
+    address[] public whiteListArray;
+
+    event WhiteListUpdated(address indexed _address, bool status);
  
     modifier onlyOwner {
-        require(msg.sender == ownerManager.owner());
+        require(msg.sender == ownerManager.owner(), "caller is not the owner");
         _;
     }
 
-    mapping (address => bool) public whiteList;
+    constructor(address _ownerManager) {
+        ownerManager = IOwnerManager(_ownerManager);
+    }
 
-    function setWhiteList(address user, bool status) external onlyOwner returns(bool) {
-        return whiteList[user] = status;
+    function setWhiteList(address _address, bool status) external onlyOwner {
+        whiteList[_address] = status;
+        whiteListArray.push(_address);
+
+        emit WhiteListUpdated(_address, status);
     }
 } 
