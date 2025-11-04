@@ -33,6 +33,8 @@ describe("WhiteListTest", function () {
       .setWhiteList(await owner.getAddress(), true);
     await tx.wait();
 
+    expect(await whiteList.whiteListArray(0) == "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+
     await expect(tx)
     .to.emit(whiteList, "WhiteListUpdated")
     .withArgs(await owner.getAddress(), true);
@@ -44,8 +46,16 @@ describe("WhiteListTest", function () {
       .setWhiteList(await owner.getAddress(), false);
     await tx.wait();
 
+    expect(await whiteList.whiteListArray(0) == ethers.ZeroAddress);
+
     await expect(tx)
     .to.emit(whiteList, "WhiteListUpdated")
     .withArgs(await owner.getAddress(), false);
+
+    // 잘못된 WhiteList 멤버를 삭제하려고 할때
+    await expect(whiteList
+      .connect(owner)
+      .setWhiteList(await owner.getAddress(), false)
+    ).to.be.revertedWithCustomError(whiteList, "IncorrectAddress");
   });
 });
