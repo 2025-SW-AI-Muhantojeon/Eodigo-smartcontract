@@ -2,5 +2,5 @@
 pragma solidity ^0.8.20;
 
 interface IStoreList {
-    function storeList(address user) external view returns (bool);
+    function storeList(uint256 storeId) external view returns (bool);
 }

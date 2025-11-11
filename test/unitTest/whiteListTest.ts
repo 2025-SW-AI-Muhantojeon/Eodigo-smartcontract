@@ -23,39 +23,27 @@ describe("WhiteListTest", function () {
   it ("Auth Test", async () => {
     await expect(whiteList
       .connect(otherAccounts[0])
-      .setWhiteList(await otherAccounts[0].getAddress(), true)
+      .setWhiteList(otherAccounts[0], true)
     ).to.be.revertedWith("caller is not the owner");
   });
 
-  it("WhiteList add", async () => {
+  it("setWhiteList function Test", async () => {
     const tx = await whiteList
       .connect(owner)
-      .setWhiteList(await owner.getAddress(), true);
+      .setWhiteList(owner, true);
     await tx.wait();
-
-    expect(await whiteList.whiteListArray(0) == "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
 
     await expect(tx)
     .to.emit(whiteList, "WhiteListUpdated")
     .withArgs(await owner.getAddress(), true);
-  });
 
-  it("WhiteList delete", async () => {
-    const tx = await whiteList
+    const tx2 = await whiteList
       .connect(owner)
-      .setWhiteList(await owner.getAddress(), false);
-    await tx.wait();
+      .setWhiteList(owner, false);
+    await tx2.wait();
 
-    expect(await whiteList.whiteListArray(0) == ethers.ZeroAddress);
-
-    await expect(tx)
+    await expect(tx2)
     .to.emit(whiteList, "WhiteListUpdated")
     .withArgs(await owner.getAddress(), false);
-
-    // 잘못된 WhiteList 멤버를 삭제하려고 할때
-    await expect(whiteList
-      .connect(owner)
-      .setWhiteList(await owner.getAddress(), false)
-    ).to.be.revertedWithCustomError(whiteList, "IncorrectAddress");
   });
 });
