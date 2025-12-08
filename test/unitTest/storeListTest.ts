@@ -3,6 +3,10 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 import { OwnerManager, StoreList } from "../../typechain-types";
 
+/**
+ * @TODO
+ * 이벤트 재 작성하기
+ */
 describe("StoreListTest", function () {
   let owner: Signer,
     otherAccounts: Signer[],
@@ -42,9 +46,12 @@ describe("StoreListTest", function () {
     );
 
     const store = await storeList.storeList(1n);
-    expect(store.storeId).to.equal(1n);
+    expect(store.id).to.equal(1n);
     expect(store.wallet).to.equal(owner);
     expect(store.status).to.equal(true);
+
+    const storeId = await storeList.storeIdByAddress(owner);
+    expect(storeId).to.equal(1n);
 
     // 중복 등록 시도
     await expect(storeList
@@ -70,6 +77,9 @@ describe("StoreListTest", function () {
     await expect(tx).to
       .emit(storeList, "StoreWalletUpdated")
       .withArgs(1n, anotherAddress);
+    
+    expect(await storeList.storeIdByAddress(owner)).to.equal(0n);
+    expect(await storeList.storeIdByAddress(anotherAddress)).to.equal(1n);
 
     // 잘못된 storeId
     await expect(storeList

@@ -1,58 +1,95 @@
-// // SPDX-License-Identifier: Apache-2.0
-// pragma solidity ^0.8.20;
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity ^0.8.20;
 
-// import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-// import "../interface/IOwnerManager.sol";
-// import "../interface/IStoreList.sol";
-// import "../interface/IWhiteList.sol";
+import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "../interface/IOwnerManager.sol";
+import "../interface/IStoreList.sol";
+import "../interface/IWhiteList.sol";
 
-// // @TODO
-// // 정산 기능, 6개월 미사용시 자산 초기화
+contract GiftContract is ERC20, ERC2771Context {
+    IOwnerManager public ownerManager;
+    IWhiteList public whiteList;
+    IStoreList public storeList;
 
-// contract GiftContract is ERC20 {
-//     IOwnerManager public ownerManager;
-//     IWhiteList public whiteList;
-//     IStoreList public storeList;
+    mapping (address => uint256) expiryDate;
 
-//     mapping (address => uint256) expriyDate;
-//     mapping (address => uint256) cashOutValue;
+    event CashOut(address storeAddress, uint256 value);
 
-//     event CashOut(address storeAddress, uint256 value);
+    modifier onlyOwner {
+        require(_msgSender() == ownerManager.owner(), "caller is not the owner");
+        _;
+    }
 
-//     modifier onlyOwner {
-//         require(msg.sender == ownerManager.owner(), "caller is not the owner");
-//         _;
-//     }
+    modifier onlyWhiteList {
+        require(whiteList.whiteList(_msgSender()), "address is not whiteList");
+        _;
+    }
 
-//     modifier onlyWhiteList(address _address) {
-//         require(whiteList.whiteList(_address), "address is not whiteList");
-//         _;
-//     }
+    constructor(
+        address forwarder, 
+        address _ownerManager,
+        address _storeList,
+        address _whiteList
+    ) ERC20("EodigoToken", "EDG") ERC2771Context(forwarder) {
+        ownerManager = IOwnerManager(_ownerManager);
+        storeList = IStoreList(_storeList);
+        whiteList = IWhiteList(_whiteList);
+    }
 
-//     modifier onlyStore(address _address) {
-//         require(storeList.storeList(_address), "address is not store");
-//         _;
-//     }
+    // 만료되었는지 확인, 만약 만료되었을 경우에는 소각
+    function cashExpiredCheck(address _address) public onlyOwner {
+        if (block.timestamp > expiryDate[_address]) {
+            _burn(_address, balanceOf(_address));
+        }
+    }
 
-//     constructor(address _ownerManager, address _storeList, address _whiteList) ERC20("EodigoToken", "EDG") {
-//         ownerManager = IOwnerManager(_ownerManager);
-//         storeList = IStoreList(_storeList);
-//         whiteList = IWhiteList(_whiteList);
-//     }
+    // 발급
+    function mint(address to, uint256 value) onlyOwner public {
+        _mint(to, value);
 
-//     function mint(uint256 value) onlyOwner public {
-//         _mint(msg.sender, value);
-//     }
+        expiryDate[to] = block.timestamp + 180 days; // 6개월
+    }
 
-//     function transfer(
-//         address to,
-//         uint256 value
-//     ) public onlyWhiteList(msg.sender) onlyStore(to) override returns (bool) {
-//         return super.transfer(to, value);
-//     }
+    // 결제
+    function transfer(
+        address to,
+        uint256 value
+    ) public onlyWhiteList override returns(bool) {
+        expiryDate[_msgSender()] = block.timestamp + 180 days; // 6개월
 
+        // Store 유효성 검사
+        uint256 storeId = storeList.storeIdByAddress(to);
+        IStoreList.Store memory store = storeList.storeList(storeId);
 
-//     function decimals() public pure override returns (uint8) {
-//         return 0;
-//     }
-// }
+        require(store.wallet != address(0) && store.status, "Incorrect Address");
+
+        return super.transfer(store.wallet, value);
+    }
+
+    function settlement(uint256 value) public {
+        uint256 storeId = storeList.storeIdByAddress(_msgSender());
+        IStoreList.Store memory store = storeList.storeList(storeId);
+
+        require(store.wallet != address(0) && store.status, "Incorrect sender");
+
+        _burn(store.wallet, value);
+        emit CashOut(store.wallet, value);
+    }
+
+    function decimals() public pure override returns (uint8) {
+        return 0;
+    }
+
+    function _msgSender() internal view override(Context, ERC2771Context) returns (address sender) {
+        return ERC2771Context._msgSender();
+    }
+
+    function _msgData() internal view override(Context, ERC2771Context) returns (bytes calldata) {
+        return ERC2771Context._msgData();
+    }
+
+    function _contextSuffixLength() internal view override(Context, ERC2771Context) returns (uint256) {
+        return super._contextSuffixLength();
+    }
+}

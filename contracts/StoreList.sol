@@ -7,12 +7,13 @@ contract StoreList {
     IOwnerManager public ownerManager;
 
     struct Store {
-        uint256 storeId;
+        uint256 id;
         address wallet;
         bool status;
     }
 
     mapping (uint256 => Store) public storeList;
+    mapping (address => uint256) public storeIdByAddress;
 
     error IncorrectStoreId(uint256 storeId);
     error IncorrectAddress(address wallet);
@@ -35,9 +36,11 @@ contract StoreList {
         require(store.wallet == address(0), "already exist store");
         if (wallet == address(0)) revert IncorrectAddress(wallet);
 
-        storeList[storeId].storeId = storeId;
-        storeList[storeId].wallet = wallet;
-        storeList[storeId].status = true;
+        store.id = storeId;
+        store.wallet = wallet;
+        store.status = true;
+
+        storeIdByAddress[wallet] = storeId;
 
         emit NewStore(storeId, store);
     }
@@ -47,7 +50,11 @@ contract StoreList {
         if (store.wallet == address(0)) revert IncorrectStoreId(storeId);
         if (newWallet == address(0)) revert IncorrectAddress(newWallet);
 
+        // 이전 주소값 초기화
+        storeIdByAddress[store.wallet] = 0;
+
         store.wallet = newWallet;
+        storeIdByAddress[newWallet] = storeId;
 
         emit StoreWalletUpdated(storeId, newWallet);
     }
