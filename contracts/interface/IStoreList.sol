@@ -2,5 +2,12 @@
 pragma solidity ^0.8.20;
 
 interface IStoreList {
-    function storeList(address user) external view returns (bool);
+    struct Store {
+        uint256 id;
+        address wallet;
+        bool status;
+    }
+
+    function storeList(uint256 storeId) external view returns (Store memory);
+    function storeIdByAddress(address _address) external view returns (uint256);
 }

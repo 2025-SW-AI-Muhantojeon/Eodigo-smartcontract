@@ -2,5 +2,5 @@
 pragma solidity ^0.8.20;
 
 interface IWhiteList {
-    function whiteList(address user) external view returns (bool);
+    function whiteList(address wallet) external view returns (bool);
 }
