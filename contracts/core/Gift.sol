@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.20;
 
+import "hardhat/console.sol";
 import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../interface/IOwnerManager.sol";
-import "../interface/IStoreList.sol";
 import "../interface/IWhiteList.sol";
+import "../interface/IStoreList.sol";
 
-contract GiftContract is ERC20, ERC2771Context {
+contract Gift is ERC20, ERC2771Context {
     IOwnerManager public ownerManager;
     IWhiteList public whiteList;
     IStoreList public storeList;
 
-    mapping (address => uint256) expiryDate;
+    mapping (address => uint256) public expiryDate;
 
-    event CashOut(address storeAddress, uint256 value);
+    event CashOut(uint256 storeId, uint256 value);
 
     modifier onlyOwner {
         require(_msgSender() == ownerManager.owner(), "caller is not the owner");
@@ -33,21 +34,19 @@ contract GiftContract is ERC20, ERC2771Context {
         address _whiteList
     ) ERC20("EodigoToken", "EDG") ERC2771Context(forwarder) {
         ownerManager = IOwnerManager(_ownerManager);
-        storeList = IStoreList(_storeList);
         whiteList = IWhiteList(_whiteList);
+        storeList = IStoreList(_storeList);
     }
 
     // 만료되었는지 확인, 만약 만료되었을 경우에는 소각
     function cashExpiredCheck(address _address) public onlyOwner {
-        if (block.timestamp > expiryDate[_address]) {
-            _burn(_address, balanceOf(_address));
-        }
+        if (block.timestamp > expiryDate[_address]) _burn(_address, balanceOf(_address));
     }
 
     // 발급
     function mint(address to, uint256 value) onlyOwner public {
         _mint(to, value);
-
+        
         expiryDate[to] = block.timestamp + 180 days; // 6개월
     }
 
@@ -61,20 +60,24 @@ contract GiftContract is ERC20, ERC2771Context {
         // Store 유효성 검사
         uint256 storeId = storeList.storeIdByAddress(to);
         IStoreList.Store memory store = storeList.storeList(storeId);
-
-        require(store.wallet != address(0) && store.status, "Incorrect Address");
+        require(store.wallet != address(0) && store.status, "Incorrect Store Address");
 
         return super.transfer(store.wallet, value);
     }
 
-    function settlement(uint256 value) public {
+    // 정산
+    function settlement(uint256 value) public  {
+        // Store 유효성 검사
         uint256 storeId = storeList.storeIdByAddress(_msgSender());
         IStoreList.Store memory store = storeList.storeList(storeId);
+        require(store.wallet != address(0) && store.status, "Incorrect Store Address");
+        require(!(balanceOf(_msgSender()) < value), "Balance Too Low");
 
-        require(store.wallet != address(0) && store.status, "Incorrect sender");
-
+        // 정산량 만큼 소각
         _burn(store.wallet, value);
-        emit CashOut(store.wallet, value);
+
+        // 기록
+        emit CashOut(store.id, value);
     }
 
     function decimals() public pure override returns (uint8) {

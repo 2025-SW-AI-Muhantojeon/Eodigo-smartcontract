@@ -10,5 +10,4 @@ interface IStoreList {
 
     function storeList(uint256 storeId) external view returns (Store memory);
     function storeIdByAddress(address _address) external view returns (uint256);
-    
 }

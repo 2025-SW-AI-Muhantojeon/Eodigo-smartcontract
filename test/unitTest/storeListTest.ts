@@ -3,11 +3,7 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 import { OwnerManager, StoreList } from "../../typechain-types";
 
-/**
- * @TODO
- * 이벤트 재 작성하기
- */
-describe("StoreListTest", function () {
+describe("StoreListTest", () => {
   let owner: Signer,
     otherAccounts: Signer[],
     ownerManager: OwnerManager,
